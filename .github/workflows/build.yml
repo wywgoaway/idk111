@@ -3,11 +3,14 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - main # Change to your default branch if not 'main'
+      - main # Ensure this matches your default branch
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    permissions: # Grant write access to contents
+      contents: write
 
     steps:
       - name: Checkout code
@@ -28,4 +31,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: . # Publish the root directory since there's no build step
+          publish_dir: . # Publish the root directory
